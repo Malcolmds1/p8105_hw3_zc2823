@@ -9,6 +9,10 @@ library(tidyverse)
 library(p8105.datasets)
 library(knitr)
 library(tidyr)
+library(forcats)
+library(scales)
+library(ggplot2)
+library(grid)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -95,26 +99,28 @@ There are 134 aisles in the Instacart dataset. Among them, the aisles with the l
 Count and keep aisles with > 10,000 items ordered
 and Plot
 
-```{r}
+```{r, fig.height=10}
 instacart %>%
-  group_by(aisle) %>%
-  summarize(n = n()) %>%
-  filter(n > 10000) %>%
-  ggplot(aes(x = reorder(aisle, n), y = n)) +
-  geom_point(color = "steelblue", size = 2) +
+  count(aisle, name = "items_ordered") %>%
+  filter(items_ordered > 10000) %>%
+  mutate(aisle = fct_reorder(aisle, items_ordered)) %>%
+  ggplot(aes(x = aisle, y = items_ordered)) +
+  geom_col(width = 0.7, fill = "steelblue") + 
+  coord_flip() +
   scale_y_continuous(
-    breaks = seq(0, 150000, by = 20000),   
-    labels = scales::comma                 
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-    plot.title = element_text(hjust = 0.5, face = "bold")
+    labels = label_comma(),
+    expand = expansion(mult = c(0, 0.05))
   ) +
   labs(
-    title = "Number of Items Ordered by Aisle (>10,000 Orders)",
-    x = "Aisle Name",
-    y = "Number of Items Ordered"
+    title = "Number of Items Ordered by Aisle (>10,000)",
+    x = "Aisle",
+    y = "Items Ordered"
+  ) +
+  theme_minimal(base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.y = element_text(size = 6),
+    panel.grid.major.y = element_blank()
   )
 ```
 
@@ -183,7 +189,190 @@ kable(mean_hour_table, digits = 2,
 ```
 
 
+# Problem 2
 
+
+
+
+
+
+
+
+
+
+
+# Problem 3
+
+Read demographic and accelerometer data
+
+```{r}
+nhanes_covar <- read_csv("data/nhanes_covar.csv", skip = 4)
+nhanes_accel <- read_csv("data/nhanes_accel.csv")
+```
+
+Merge 
+
+```{r}
+nhanes_merged <- nhanes_accel %>%
+  left_join(nhanes_covar, by = "SEQN")
+```
+
+Exclude participants < 21 years old or with missing demographic data
+
+```{r}
+nhanes_clean <- nhanes_merged %>%
+  filter(age >= 21) %>%
+  drop_na(sex, education, age, BMI)
+```
+
+Convert variables to appropriate classes
+
+```{r}
+nhanes_clean <- nhanes_clean %>%
+  mutate(
+    sex = recode_factor(sex, "1" = "Male", "2" = "Female"),
+    education = recode_factor(
+      education,
+      "1" = "Less than high school",
+      "2" = "High school or GED",
+      "3" = "More than high school",
+      .ordered = TRUE
+    )
+  )
+
+```
+
+#### Table for the number of men and women in each education category
+
+```{r}
+edu_sex_table <- nhanes_clean %>%
+  group_by(education, sex) %>%
+  summarize(`Number of participants` = n(), .groups = "drop") %>%
+  pivot_wider(
+    names_from = sex,
+    values_from = `Number of participants`
+  )
+
+kable(
+  edu_sex_table,
+  caption = "Number of Men and Women by Education Category"
+)
+```
+
+The table shows that the number of men and women is relatively balanced across education levels, though slightly more participants, both male and female, fall into the “more than high school” category.
+
+#### Visualization of the age distributions for men and women in each education category
+
+```{r}
+ggplot(nhanes_clean, aes(x = age, fill = sex)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~education, ncol = 1) +
+  theme_minimal() +
+  labs(
+    title = "Age Distributions by Sex within Each Education Category",
+    x = "Age (years)",
+    y = "Density",
+    fill = "Sex"
+  )
+```
+
+From the age distribution plots, participants with more than high school education tend to cluster at younger ages, while those with less than high school education show a wider spread extending into older ages. Gender differences in age distribution are minimal overall, although women appear slightly younger on average in the higher education groups.
+
+#### Plot total activities against age 
+
+Calculate total activity over the day
+
+```{r}
+nhanes_total <- nhanes_clean %>%
+  mutate(
+    total_activity = rowSums(across(starts_with("min")), na.rm = TRUE)
+  ) %>%
+  distinct(SEQN, age, sex, education, total_activity)
+```
+
+Visualization
+
+```{r}
+ggplot(nhanes_total, aes(x = age, y = total_activity, color = sex)) +
+  geom_point(alpha = 0.5, size = 1.5) +
+  geom_smooth(method = "loess", se = TRUE, linewidth = 0.8) +
+  facet_wrap(~ education, nrow = 1) +
+  scale_color_viridis_d(option = "plasma", end = 0.8) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(
+    title = "Daily Total Physical Activity by Age, Sex, and Education Level",
+    x = "Age",
+    y = "Total Activity (minutes)",
+    color = "sex"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title   = element_text(face = "bold", hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    strip.text   = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1, "lines")
+  )
+```
+
+The figure shows that total daily physical activity tends to decline with age across all education groups.
+Participants with less than high school education exhibit the steepest decrease, suggesting that older adults in this group are considerably less active.
+Those with more than high school education maintain relatively stable activity levels through middle age, followed by a gradual decline.
+Differences between men and women are modest overall. Among younger adults, women show slightly higher total activity on average. At older ages, the two lines converge, indicating comparable activity levels between sexes.
+Overall, the plot highlights an inverse relationship between age and daily activity, consistent across education levels but varying in magnitude.
+
+#### Three-panel plot that shows the 24-hour activity time courses for each education level
+
+Pivot longer
+
+```{r}
+nhanes_long <- nhanes_clean %>%
+  pivot_longer(
+    cols = starts_with("min"),
+    names_to = "minute",
+    values_to = "MIMS"
+  ) %>%
+  mutate(
+    minute = as.numeric(str_remove(minute, "min")),
+    hour = floor((minute - 1) / 60)  # 0–23
+  )
+```
+
+Summarize hourly mean by sex and education
+
+```{r}
+hourly_activity <- nhanes_long %>%
+  group_by(education, sex, hour) %>%
+  summarize(mean_MIMS = mean(MIMS, na.rm = TRUE), .groups = "drop")
+```
+
+Plot
+
+```{r}
+ggplot(hourly_activity, aes(x = hour, y = mean_MIMS, color = sex)) +
+  geom_line(linewidth = 0.5) +
+  facet_wrap(~ education, ncol = 1) +
+  geom_smooth(se = FALSE, linewidth = 0.6, linetype = "dashed") +
+  scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+  scale_color_manual(values = c("Male" = "#2B6CB0", "Female" = "#E53E3E")) +
+  labs(
+    title = "24-hour Activity Patterns by Education Level and Sex",
+    x = "Hour of Day",
+    y = "Average Activity (mean MIMS)",
+    color = "Sex"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
+    strip.text = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+Activity levels are lowest during the early morning hours, increase rapidly after approximately 6–8 AM, and peak around midday (10 AM–2 PM) before gradually declining through the evening.
+Across panels, individuals with more than high school education exhibit slightly higher overall activity levels throughout the day, whereas those with less than high school education display lower and more variable activity.
+Sex differences are modest: both men and women follow nearly identical daily cycles, although women tend to maintain slightly higher activity levels in the afternoon hours.
 
 
 
