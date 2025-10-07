@@ -1,0 +1,62 @@
+---
+title: "Homework3_zc2823"
+output: github_document
+date: "2025-10-07"
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.color = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_color_discrete = scale_color_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+set.seed(1)
+```
+
+# Problem 1
+
+Loading data and read 'instacart'
+
+```{r}
+data("instacart")
+```
+
+### Size and Structure of the data
+
+```{r}
+n_obs <- nrow(instacart)
+n_vars <- ncol(instacart)
+
+glimpse(instacart)
+```
+
+### Examples of observations
+
+```{r}
+example_rows <- instacart |> 
+  slice_sample(n = 5)
+
+example_rows
+```
+
+#### Short Description of the data
+
+The Instacart dataset contains information on 1,384,617 observations and 15 variables, each corresponding to a single product added to a customer’s online grocery order. Each row represents one product within an order, while columns describe identifiers, product details, and timing information for that purchase, and multiple rows can belong to the same order or user.
+
+Key variables include `order_id` and `user_id` for identifying orders and customers, `product_name` describing the purchased items, `aisle` and `department` indicating the product’s physical or categorical location within the store (for example, yogurt in the dairy eggs department), and `order_dow` and `order_hour_of_day` capturing when the purchases occurred. Also, the variable `reordered` flags whether the product had been previously purchased by the same user.
+
+For example, a sample of five observations shows that user 197159 placed an order (`order_id` 1107870) where `product_id` 33731 was added as the 6th item in the cart and was not ordered by this user in the past.
