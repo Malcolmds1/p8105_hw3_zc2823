@@ -168,15 +168,27 @@ dow_labels <- c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 Calculate the mean hour and transform it into a wider format
 
+convert decimal hour to HH:MM format
+
+```{r}
+convert_to_time <- function(x) {
+  hour <- floor(x)
+  minute <- round((x - hour) * 60)
+  sprintf("%02d:%02d", hour, minute)
+}
+```
+
 ```{r}
 mean_hour_table <- instacart %>%
   filter(product_name %in% target_products) %>%
   mutate(order_dow = factor(order_dow, levels = 0:6, labels = dow_labels)) %>%
   group_by(product_name, order_dow) %>%
-  summarize(`Mean order hour` = mean(order_hour_of_day), .groups = "drop") %>%
+  summarize(mean_hour = mean(order_hour_of_day), .groups = "drop") %>%
+  mutate(mean_hour_fmt = convert_to_time(mean_hour)) %>%
+  select(-mean_hour) %>%
   pivot_wider(
     names_from = order_dow,
-    values_from = `Mean order hour`
+    values_from = mean_hour_fmt
   ) %>%
   arrange(product_name)
 ```
@@ -184,8 +196,10 @@ mean_hour_table <- instacart %>%
 Output a clean table
 
 ```{r}
-kable(mean_hour_table, digits = 2,
-      caption = "Mean Hour of the Day When Selected Items Are Ordered")
+kable(
+  mean_hour_table,
+  caption = "Mean Order Time of Day (HH:MM) for Selected Items"
+)
 ```
 
 
