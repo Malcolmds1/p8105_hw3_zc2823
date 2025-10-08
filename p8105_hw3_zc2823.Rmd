@@ -13,6 +13,8 @@ library(forcats)
 library(scales)
 library(ggplot2)
 library(grid)
+library(lubridate)
+library(janitor)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -205,14 +207,59 @@ kable(
 
 # Problem 2
 
+Import, clean, and tidy the datasets
 
+```{r}
+zillow_long <-
+  read_csv("data/Zip_zori.csv") |>
+  pivot_longer(
+    -(RegionID:CountyName),           
+    names_to  = "month",
+    values_to = "zori"
+  ) |>
+  janitor::clean_names() |>
+  rename(zip_code = region_name) |>
+  mutate(
+    month    = ymd(month),           
+    year     = floor_date(month, "year"),
+    zip_code = as.numeric(zip_code)
+  ) |>
+  select(-county_name) |>
+  arrange(zip_code, month)
+```
 
+```{r}
+zip_meta =
+  read_csv("data/Zip_Codes.csv", na = c("NA", ".", "")) |>
+  janitor::clean_names() 
+```
 
+Make zipcode distinct
 
+```{r}
+zip_meta <- zip_meta |> distinct(zip_code, .keep_all = TRUE)
+```
 
+Merge
 
+```{r}
+zillow_df =
+  left_join(zillow_long, zip_meta, by="zip_code") 
+```
 
+#### How many ZIP codes are observed 116 times? How many are observed fewer than 10 times? Why are some ZIP codes are observed rarely and others observed in each month?
 
+```{r}
+zip_counts <- zillow_long |> 
+  group_by(zip_code) |> 
+  summarise(n_obs = sum(!is.na(zori)), .groups = "drop")
+
+n_zip_all_116 <- zip_counts |> filter(n_obs == 116) |> nrow()
+n_zip_lt_10   <- zip_counts |> filter(n_obs < 10)  |> nrow()
+```
+
+Between January 2015 and August 2024 — a total of 116 months — there are `r n_zip_all_116` ZIP codes that are observed in all 116 months, and `r n_zip_lt_10` ZIP codes that are observed fewer than 10 times. 
+ZIP codes that appear in every month likely correspond to well-established residential neighborhoods with stable housing markets and consistent Zillow coverage. In contrast, ZIP codes observed rarely (fewer than 10 times) often represent PO Box regions, non-residential or industrial areas, or newly created ZIP codes that Zillow’s dataset does not consistently track. 
 
 
 # Problem 3
