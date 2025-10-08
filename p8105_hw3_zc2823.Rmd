@@ -15,6 +15,7 @@ library(ggplot2)
 library(grid)
 library(lubridate)
 library(janitor)
+library(dplyr)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -261,6 +262,104 @@ n_zip_lt_10   <- zip_counts |> filter(n_obs < 10)  |> nrow()
 Between January 2015 and August 2024 — a total of 116 months — there are `r n_zip_all_116` ZIP codes that are observed in all 116 months, and `r n_zip_lt_10` ZIP codes that are observed fewer than 10 times. 
 ZIP codes that appear in every month likely correspond to well-established residential neighborhoods with stable housing markets and consistent Zillow coverage. In contrast, ZIP codes observed rarely (fewer than 10 times) often represent PO Box regions, non-residential or industrial areas, or newly created ZIP codes that Zillow’s dataset does not consistently track. 
 
+#### A table showing the average rental price in each borough and year.
+
+summarize mean ZORI by borough and year and make a table
+
+```{r}
+zillow_df |>
+  mutate(
+    borough = case_match(
+      county,
+      "Bronx" ~ "Bronx",
+      "Kings" ~ "Brooklyn",
+      "New York" ~ "Manhattan",
+      "Queens" ~ "Queens",
+      "Richmond" ~ "Staten Island"
+    ),
+      year = year(month)) |>
+  group_by(borough, year) |>
+  summarise(avg_rent = mean(zori, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(
+    names_from = year,
+    values_from = avg_rent
+  ) |>
+  mutate(across(where(is.numeric), ~round(.x, 0))) |>
+  kable(
+    digits = 0,
+    caption = "Average Zillow Rental Index (ZORI) by Borough and Year, 2015–2024"
+  )
+```
+
+Across all five boroughs, average rental prices show a steady upward trend 
+from 2015 to 2024. Manhattan consistently has the highest rental prices, 
+followed by Brooklyn and Queens, while the Bronx remains the most affordable area. 
+After 2020, rental prices in all boroughs appear to rise more sharply, likely 
+reflecting post-pandemic recovery and inflation-driven increases in housing demand.
+
+#### Make a plot showing NYC Rental Prices within ZIP codes for all available years
+
+Calculate average rent
+
+```{r}
+avg_rent <- 
+  zillow_df %>%
+  mutate(
+    borough = case_match(
+      county,
+      "Bronx" ~ "Bronx",
+      "Kings" ~ "Brooklyn",
+      "New York" ~ "Manhattan",
+      "Queens" ~ "Queens",
+      "Richmond" ~ "Staten Island",
+      .default = NA_character_
+    ),
+    year = year(month)
+  ) %>%
+  group_by(borough, year) %>%
+  summarise(AvgRent = mean(zori, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = borough, values_from = AvgRent)
+```
+
+Pivot longer
+
+```{r}
+avg_rent_long <- avg_rent %>%
+  pivot_longer(
+    cols = -year,
+    names_to = "borough",
+    values_to = "AvgRent"
+  )
+```
+
+Plot!!!
+
+```{r}
+ggplot(avg_rent_long, aes(x = year, y = AvgRent, color = borough)) +
+  geom_line(linewidth = 1.6) +
+  geom_point(size = 2) +
+  labs(
+    title = "NYC Rental Prices within ZIP Codes for All Available Years",
+    x = "Year",
+    y = "Average Rental Price ($)",
+    color = "Borough"
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(avg_rent_long$year, na.rm = TRUE),
+                 max(avg_rent_long$year, na.rm = TRUE),
+                 by = 1)
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+The plot shows that rental prices have generally increased across all NYC boroughs from 2015 to 2024. Manhattan remains the most expensive area, followed by Brooklyn and Queens, while the Bronx and Staten Island have lower average rents. A brief dip or plateau around 2020–2021 likely reflects the COVID-19 pandemic’s impact, but prices rose sharply afterward, suggesting a strong post-pandemic recovery in the housing market.
+
+#### Plot showing the distribution of ZIP-code-level rental prices across boroughs
 
 # Problem 3
 
