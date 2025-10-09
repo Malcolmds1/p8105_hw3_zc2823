@@ -338,7 +338,7 @@ Plot!!!
 ```{r}
 line_chart <- 
 ggplot(avg_rent_long, aes(x = year, y = AvgRent, color = borough)) +
-  geom_line(linewidth = 1.6) +
+  geom_line(linewidth = 1) +
   geom_point(size = 2) +
   labs(
     title = "NYC Rental Prices within ZIP Codes for All Available Years",
@@ -412,23 +412,20 @@ The boxplot shows clear differences in ZIP-level rental prices across NYC boroug
 #### Combine the two plots
 
 ```{r}
-combined_plot <- line_chart / box_plot + 
-  plot_annotation(
-    title = "NYC Rental Prices: Trends and 2023 Distribution by Borough",
-    subtitle = "Top: Average rental price trends (2015–2024) | Bottom: ZIP-level distribution in 2023",
-    theme = theme(plot.title = element_text(face = "bold", size = 14))
-  )
+combined_plot <- line_chart / box_plot
 
 combined_plot
 
 ggsave(
   filename = "results/nyc_rentals_combined.png",
   plot = combined_plot,
-  width = 10,
+  width = 8,
   height = 10,
   dpi = 300
 )
 ```
+
+
 
 # Problem 3
 
