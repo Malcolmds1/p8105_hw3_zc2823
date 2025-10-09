@@ -460,7 +460,7 @@ combined_plot_small
 
 dir.create("results", showWarnings = FALSE)
 ggsave(
-  "results/nyc_rentals_combined_small.png",
+  "results/nyc_rentals_combined.png",
   plot = combined_plot_small,
   width = 9,
   height = 12,
