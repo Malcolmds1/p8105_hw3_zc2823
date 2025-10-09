@@ -411,20 +411,62 @@ The boxplot shows clear differences in ZIP-level rental prices across NYC boroug
 
 #### Combine the two plots
 
+Make the two plots smaller
 ```{r}
-combined_plot <- line_chart / box_plot
+line_chart_small <- 
+  ggplot(avg_rent_long, aes(x = year, y = AvgRent, color = borough)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "NYC Rental Prices within ZIP Codes for All Available Years",
+    x = "Year",
+    y = "Average Rental Price ($)",
+    color = "Borough"
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(avg_rent_long$year, na.rm = TRUE),
+                 max(avg_rent_long$year, na.rm = TRUE),
+                 by = 1)
+  ) +
+  theme_minimal(base_size = 7) +   
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
 
-combined_plot
+box_plot_small <-
+  ggplot(zip_2023, aes(x = borough, y = avg_rent_2023, fill = borough)) +
+  geom_boxplot(alpha = 0.75, outlier.alpha = 0.3) +
+  labs(
+    title = "Distribution of ZIP-Code-Level Rental Prices by Borough (2023)",
+    x = "Borough",
+    y = "Average Rental Price ($)",
+    fill = "Borough"
+  ) +
+  theme_minimal(base_size = 7) +   
+  theme(
+    plot.title = element_text(face = "bold")
+  )
 
+```
+
+Combine and save
+
+```{r}
+combined_plot_small <- line_chart_small / box_plot_small
+
+combined_plot_small
+
+dir.create("results", showWarnings = FALSE)
 ggsave(
-  filename = "results/nyc_rentals_combined.png",
-  plot = combined_plot,
-  width = 8,
-  height = 10,
+  "results/nyc_rentals_combined_small.png",
+  plot = combined_plot_small,
+  width = 9,
+  height = 12,
   dpi = 300
 )
 ```
-
 
 
 # Problem 3
